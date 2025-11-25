@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-
 import '../../bindings/AddEnquiryBinding.dart';
 import '../../bindings/InventoryBinding.dart';
 import '../../bindings/NotificationBinding.dart';
@@ -9,7 +8,6 @@ import '../../bindings/billing_binding.dart';
 import '../../bindings/home_binding.dart';
 import '../../bindings/login_binding.dart';
 import '../../bindings/sign_up_binding.dart';
-
 import '../../bindings/view_bills_binding.dart';
 import '../../bindings/viewenquirybinding.dart';
 import '../../screens/AddEnquiryScreen.dart';
@@ -41,9 +39,6 @@ class AdminRoutes {
   static const viewbill = '/viewbill';
   static const viewenquiry = '/viewenquiry';
   static const profilescreen = '/profilescreen';
-
-
-
 
   // ==================
   // Route Definitions

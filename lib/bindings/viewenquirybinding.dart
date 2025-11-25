@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../controllers/ViewEnquiryController.dart';
+import '../controllers/viewenquirycontroller.dart';
 
 class ViewEnquiryBinding extends Bindings {
   @override

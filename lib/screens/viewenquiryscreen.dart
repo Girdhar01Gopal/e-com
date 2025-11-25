@@ -1,19 +1,19 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
+
 import 'package:share_plus/share_plus.dart';
 import '../controllers/viewenquirycontroller.dart';
 
-class ViewEnquiryScreen extends StatelessWidget {
+class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
   const ViewEnquiryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // THIS FIXES "Controller not found"
-    final ViewEnquiryController controller = Get.put(ViewEnquiryController());
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -26,7 +26,7 @@ class ViewEnquiryScreen extends StatelessWidget {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.blue.shade800, Colors.blue.shade400],
+              colors: [Colors.blue, Colors.blueAccent],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -39,7 +39,7 @@ class ViewEnquiryScreen extends StatelessWidget {
           return const Center(
             child: Text(
               "No Enquiries Added",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           );
         }
@@ -51,16 +51,15 @@ class ViewEnquiryScreen extends StatelessWidget {
             final enquiry = controller.enquiryList[index];
 
             return Card(
+              elevation: 3,
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              elevation: 3,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    // Column for enquiry details
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,17 +71,14 @@ class ViewEnquiryScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Share Icon Button at the right corner
-                    IconButton(
-                      icon: Icon(Icons.share, color: Colors.green),
-                      onPressed: () async {
-                        // Generate the PDF for the enquiry
-                        File pdfFile = await _generateEnquiryPDF(enquiry);
 
-                        // Share the generated PDF
-                        _sharePDF(pdfFile);
+                    IconButton(
+                      icon: const Icon(Icons.share, color: Colors.green),
+                      onPressed: () async {
+                        final pdf = await _generatePDF(enquiry);
+                        _sharePDF(pdf);
                       },
-                    ),
+                    )
                   ],
                 ),
               ),
@@ -93,7 +89,6 @@ class ViewEnquiryScreen extends StatelessWidget {
     );
   }
 
-  // Generic row to display enquiry data
   Widget _row(String title, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -118,38 +113,38 @@ class ViewEnquiryScreen extends StatelessWidget {
     );
   }
 
-  // Method to generate a PDF from the enquiry data
-  Future<File> _generateEnquiryPDF(Map<String, String> enquiry) async {
+  Future<File> _generatePDF(Map<String, String> enquiry) async {
     final pdf = pw.Document();
 
     pdf.addPage(
       pw.Page(
         margin: const pw.EdgeInsets.all(32),
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text("MONTEAGE SHOPPING ! Enquiry Details",
-                  style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 10),
-              pw.Text("Name: ${enquiry['name']}"),
-              pw.Text("Phone: ${enquiry['phone']}"),
-              pw.Text("Email: ${enquiry['email']}"),
-              pw.Text("Message: ${enquiry['message']}"),
-            ],
-          );
-        },
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              "Enquiry Details",
+              style: pw.TextStyle(
+                fontSize: 22,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Text("Name: ${enquiry['name']}"),
+            pw.Text("Phone: ${enquiry['phone']}"),
+            pw.Text("Email: ${enquiry['email']}"),
+            pw.Text("Message: ${enquiry['message']}"),
+          ],
+        ),
       ),
     );
 
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/enquiry_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File("${dir.path}/enquiry_${DateTime.now().millisecondsSinceEpoch}.pdf");
     await file.writeAsBytes(await pdf.save());
-
     return file;
   }
 
-  // Method to share the generated PDF
   Future<void> _sharePDF(File file) async {
     await Share.shareXFiles([XFile(file.path)], text: "Enquiry Details");
   }

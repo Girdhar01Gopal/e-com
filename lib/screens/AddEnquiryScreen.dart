@@ -18,11 +18,16 @@ class AddEnquiryScreen extends GetView<AddEnquiryController> {
         iconTheme: const IconThemeData(color: Colors.white),
 
         actions: [
-          IconButton(
+          PopupMenuButton<int>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {
-              Get.toNamed(AdminRoutes.viewenquiry);  // ← NAVIGATION
+            onSelected: (v) {
+              if (v == 1) {
+                Get.toNamed(AdminRoutes.viewenquiry);
+              }
             },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(value: 1, child: Text("View Enquiry List")),
+            ],
           ),
         ],
 

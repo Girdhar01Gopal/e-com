@@ -1,203 +1,176 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart'; // Import the intl package for date formatting
+import 'package:intl/intl.dart';
 import '../controllers/BillingController.dart';
-import '../infrastructure/routes/admin_routes.dart';  // Import the controller
+import '../infrastructure/routes/admin_routes.dart';
+import '../models/bill_model.dart';
 
 class BillingScreen extends StatelessWidget {
-  final BillingController controller = Get.put(BillingController());  // Make sure the controller is instantiated
+  final BillingController controller = Get.put(BillingController());
 
   @override
   Widget build(BuildContext context) {
-    // Get the current date and format it to dd-MM-yyyy
     String formattedDate = DateFormat('dd-MM-yyyy').format(DateTime.now());
 
     return Scaffold(
-      backgroundColor: Colors.white, // Set the background color to white
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: RichText(
-          text: TextSpan(
-            text: "Create Bill\n",
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-            children: <TextSpan>[
-              // Display the formatted current date in the app bar
-              TextSpan(
-                text: formattedDate, // Show current date as dd-MM-yyyy
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ],
-          ),
-        ),
-        backgroundColor: Colors.blue, // Gradient background
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.blue.shade800, Colors.blue.shade400], // Gradient effect
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white), // White back arrow
-          onPressed: () => Get.back(),
-        ),
+        title: Text("Create Bill\n$formattedDate",
+            style: const TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.blue,
         actions: [
-          // Three-dot menu icon button
           PopupMenuButton<int>(
-            icon: Icon(Icons.more_vert, color: Colors.white), // Three-dot icon
-            onSelected: (value) {
-              // Handle navigation when the menu item is selected
-              if (value == 1) {
-                Get.toNamed(AdminRoutes.viewbill);  // Correct navigation route
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (v) {
+              if (v == 1) {
+                Get.toNamed(AdminRoutes.viewbill);
               }
             },
-            itemBuilder: (context) => [
-              PopupMenuItem<int>(
-                value: 1,
-                child: Text("View Bill List"),
-              ),
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(value: 1, child: Text("View Bill List")),
             ],
           ),
         ],
       ),
+
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Customer Info Fields
-            _input("Customer Name", controller.name, isMandatory: true),
-            _input("Phone (+91)", controller.phone, isMandatory: true, isPhone: true),
-            _input("Email", controller.email, isEmail: true),
-            _input("Address", controller.address),
-            _input("Buy Date (dd/mm/yyyy)", controller.buyDate), // Normal keyboard
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
 
-            // Spacer Line
-            Divider(),
+          _input("Customer Name", controller.name),
+          _input("Phone (+91)", controller.phone, isPhone: true),
+          _input("Email", controller.email, isEmail: true),
+          _input("Address", controller.address),
+          _input("Buy Date (dd/mm/yyyy)", controller.buyDate),
 
-            // Product Info Dropdown
-            DropdownButtonFormField<String>(
+          const Divider(),
+
+          // PRODUCT DROPDOWN
+          Obx(() {
+            return DropdownButtonFormField<BillProductModel>(
+              isExpanded: true,
               value: controller.selectedProduct.value,
-              onChanged: (String? newValue) {
-                controller.selectedProduct.value = newValue!;
-              },
-              decoration: InputDecoration(
-                labelText: 'Product',
+              decoration: const InputDecoration(
+                labelText: "Select Product",
                 border: OutlineInputBorder(),
               ),
-              items: controller.products.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
+              items: controller.products.map((p) {
+                return DropdownMenuItem(
+                  value: p,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Text(
+                      p.productName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 );
               }).toList(),
-            ),
-
-            SizedBox(height: 10),
-
-            // Product Info Fields
-            _input("Price", controller.price, isMandatory: true, isNumeric: true),
-            _input("Quantity", controller.quantity, isMandatory: true, isNumeric: true),
-            _input("Discount", controller.discount, isNumeric: true), // Discount field
-
-            // Status Dropdown Field
-            DropdownButtonFormField<String>(
-              value: controller.selectedStatus.value,
-              onChanged: (String? newValue) {
-                controller.selectedStatus.value = newValue!;
+              onChanged: (p) {
+                if (p != null) controller.onProductSelected(p);
               },
-              decoration: InputDecoration(
-                labelText: 'Status',
-                border: OutlineInputBorder(),
+            );
+          }),
+
+          const SizedBox(height: 10),
+
+          // SKU DROPDOWN
+          Obx(() {
+            if (controller.selectedProduct.value == null ||
+                controller.selectedProduct.value!.skus.isEmpty) {
+              return const SizedBox();
+            }
+            return DropdownButtonFormField<SkuModel>(
+              value: controller.selectedSku.value,
+              decoration: const InputDecoration(
+                  labelText: "SKU Detail", border: OutlineInputBorder()),
+              items: controller.selectedProduct.value!.skus
+                  .map((s) => DropdownMenuItem(
+                  value: s, child: Text("${s.sellPrice} - ${s.size}")))
+                  .toList(),
+              onChanged: (s) => controller.onSkuSelected(s!),
+            );
+          }),
+
+          const SizedBox(height: 10),
+
+          _input("Brand", controller.brand, isReadOnly: true),
+          _input("Category", controller.category, isReadOnly: true),
+          _input("Price", controller.price, isNumeric: true),
+          _input("Quantity", controller.quantity, isNumeric: true),
+          _input("Discount", controller.discount, isNumeric: true),
+
+          DropdownButtonFormField<String>(
+            value: controller.selectedStatus.value,
+            onChanged: (v) => controller.selectedStatus.value = v!,
+            decoration: const InputDecoration(
+                labelText: "Status", border: OutlineInputBorder()),
+            items: ["Process", "Success", "Pending"]
+                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .toList(),
+          ),
+
+          const SizedBox(height: 20),
+
+          ElevatedButton(
+            onPressed: () async {
+              controller.createBill();
+              final pdf = await controller.generatePDF();
+              controller.sharePDF(pdf);
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent),
+            child: Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    colors: [Colors.blue.shade800, Colors.blue.shade400]),
+                borderRadius: BorderRadius.circular(10),
               ),
-              items: ['Process', 'Success', 'Pending']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
+              child: const Text("Create Bill",
+                  style: TextStyle(color: Colors.white, fontSize: 18)),
             ),
+          ),
 
-            SizedBox(height: 20),
-
-            // Create Bill Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent, // Set the primary color to transparent
-                minimumSize: Size(double.infinity, 60), // Button size
-                shadowColor: Colors.transparent, // Remove the shadow
-              ),
-              onPressed: () async {
-                // Check if discount is not greater than price
-                if (double.tryParse(controller.discount.text) != null &&
-                    double.tryParse(controller.price.text)! < double.tryParse(controller.discount.text)!) {
-                  Get.snackbar("Error", "Discount cannot be more than the price",
-                      backgroundColor: Colors.red, colorText: Colors.white);
-                  return;
-                }
-
-                // Save the bill
-                controller.createBill();
-
-                // Generate PDF and share
-                final pdf = await controller.generatePDF();
-                controller.sharePDF(pdf);
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade800, Colors.blue.shade400], // Blue gradient
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(8), // Optional: rounded corners
-                ),
-                padding: EdgeInsets.symmetric(vertical: 15), // Padding for button content
-                child: Text(
-                  "       Create Bill       ",
-                  style: TextStyle(
-                    color: Colors.white, // White text color
-                    fontWeight: FontWeight.bold, // Bold text
-                    fontSize: 18, // Optional: Font size
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        ]),
       ),
     );
   }
 
-  // Generic TextField with validation
-  Widget _input(String label, TextEditingController c, {bool isMandatory = false, bool isEmail = false, bool isPhone = false, bool isNumeric = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label),
-        TextField(
-          controller: c,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: isEmail ? "Enter a valid email" : "Enter $label",
-          ),
-          keyboardType: isPhone
-              ? TextInputType.phone
-              : isEmail
-              ? TextInputType.emailAddress
-              : isNumeric
-              ? TextInputType.number
-              : TextInputType.text, // Normal keyboard for Date
-          inputFormatters: isPhone
-              ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)] // Limit phone number to 10 digits
-              : isNumeric
-              ? [FilteringTextInputFormatter.digitsOnly] // Only digits
-              : [],
-        ),
-        SizedBox(height: 10),
-      ],
-    );
+  Widget _input(String label, TextEditingController c,
+      {bool isEmail = false,
+        bool isPhone = false,
+        bool isNumeric = false,
+        bool isReadOnly = false}) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label),
+      TextField(
+        controller: c,
+        readOnly: isReadOnly,
+        decoration: const InputDecoration(border: OutlineInputBorder()),
+        keyboardType: isReadOnly
+            ? TextInputType.none
+            : isPhone
+            ? TextInputType.phone
+            : isEmail
+            ? TextInputType.emailAddress
+            : isNumeric
+            ? TextInputType.number
+            : TextInputType.text,
+        inputFormatters: isNumeric
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : isPhone
+            ? [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(10)
+        ]
+            : [],
+      ),
+      const SizedBox(height: 10),
+    ]);
   }
 }
