@@ -1,19 +1,20 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-
 import 'package:share_plus/share_plus.dart';
 import '../controllers/viewenquirycontroller.dart';
+import '../models/view_enquiry_model.dart'; // Import the correct model
 
 class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
   const ViewEnquiryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Reverse the list to display the latest enquiries at the top
+    var reversedList = controller.enquiryList.reversed.toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -44,52 +45,68 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(14),
-          itemCount: controller.enquiryList.length,
-          itemBuilder: (context, index) {
-            final enquiry = controller.enquiryList[index];
+        return RefreshIndicator(
+          onRefresh: _onRefresh, // This triggers the refresh action
+          child: ListView.builder(
+            padding: const EdgeInsets.all(14),
+            itemCount: reversedList.length,
+            itemBuilder: (context, index) {
+              final enquiry = reversedList[index];
 
-            return Card(
-              elevation: 3,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _row("Name", enquiry["name"] ?? ""),
-                          _row("Phone", enquiry["phone"] ?? ""),
-                          _row("Email", enquiry["email"] ?? ""),
-                          _row("Message", enquiry["message"] ?? ""),
-                        ],
-                      ),
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.share, color: Colors.green),
-                      onPressed: () async {
-                        final pdf = await _generatePDF(enquiry);
-                        _sharePDF(pdf);
-                      },
-                    )
-                  ],
+              return Card(
+                elevation: 3,
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-            );
-          },
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF212121), // Darker shade for the gradient
+                        Color(0xFF616161), // Lighter shade for the gradient
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _row("Name", enquiry.name, Colors.green),
+                              _row("Phone", enquiry.mobile, Colors.white),
+                              _row("Email", enquiry.email, Colors.white),
+                              _row("Message", enquiry.message, Colors.white),
+                            ],
+                          ),
+                        ),
+
+                        IconButton(
+                          icon: const Icon(Icons.share, color: Colors.red), // Changed share icon color to red
+                          onPressed: () async {
+                            final pdf = await _generatePDF(enquiry);
+                            _sharePDF(pdf);
+                          },
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
         );
       }),
     );
   }
 
-  Widget _row(String title, String value) {
+  Widget _row(String title, String value, Color textColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -97,15 +114,16 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
         children: [
           Text(
             "$title: ",
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
+              color: Colors.white, // Text color is white for clarity
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 15),
+              style: TextStyle(fontSize: 15, color: textColor), // Custom text color
             ),
           ),
         ],
@@ -113,7 +131,7 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
     );
   }
 
-  Future<File> _generatePDF(Map<String, String> enquiry) async {
+  Future<File> _generatePDF(Data enquiry) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -130,10 +148,10 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
               ),
             ),
             pw.SizedBox(height: 12),
-            pw.Text("Name: ${enquiry['name']}"),
-            pw.Text("Phone: ${enquiry['phone']}"),
-            pw.Text("Email: ${enquiry['email']}"),
-            pw.Text("Message: ${enquiry['message']}"),
+            pw.Text("Name: ${enquiry.name}"),
+            pw.Text("Phone: ${enquiry.mobile}"),
+            pw.Text("Email: ${enquiry.email}"),
+            pw.Text("Message: ${enquiry.message}"),
           ],
         ),
       ),
@@ -147,5 +165,10 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
 
   Future<void> _sharePDF(File file) async {
     await Share.shareXFiles([XFile(file.path)], text: "Enquiry Details");
+  }
+
+  // Function to simulate fetching fresh data or reloading the list
+  Future<void> _onRefresh() async {
+    await controller.fetchEnquiries(); // This function should fetch the latest data from the API
   }
 }

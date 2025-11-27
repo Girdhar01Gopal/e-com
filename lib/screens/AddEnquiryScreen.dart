@@ -16,21 +16,17 @@ class AddEnquiryScreen extends GetView<AddEnquiryController> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: Colors.white),
-
         actions: [
           PopupMenuButton<int>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (v) {
-              if (v == 1) {
-                Get.toNamed(AdminRoutes.viewenquiry);
-              }
+              if (v == 1) Get.toNamed(AdminRoutes.viewenquiry);
             },
             itemBuilder: (ctx) => [
               const PopupMenuItem(value: 1, child: Text("View Enquiry List")),
             ],
           ),
         ],
-
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -40,7 +36,6 @@ class AddEnquiryScreen extends GetView<AddEnquiryController> {
             ),
           ),
         ),
-
         title: const Text(
           "Add Enquiry",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -109,7 +104,7 @@ class AddEnquiryScreen extends GetView<AddEnquiryController> {
                       ? null
                       : controller.submitEnquiry,
                   child: controller.isSubmitting.value
-                      ? CircularProgressIndicator(color: Colors.white)
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
                     "Submit Enquiry",
                     style: TextStyle(
