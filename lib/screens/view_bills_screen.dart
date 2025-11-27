@@ -8,7 +8,6 @@ class ViewBillsScreen extends StatelessWidget {
   final BillingController controller = Get.find();
   final RxMap<int, bool> expanded = <int, bool>{}.obs;
 
-
   @override
   Widget build(BuildContext context) {
     controller.fetchAllBills();
@@ -49,15 +48,14 @@ class ViewBillsScreen extends StatelessWidget {
           color: Colors.blue,
           backgroundColor: Colors.white,
           onRefresh: () async {
-            controller.searchBills(""); // RESET SEARCH
-            await controller.fetchAllBills(); // REFRESH LIST
+            controller.searchBills("");
+            await controller.fetchAllBills();
           },
 
           child: billsToShow.isEmpty
               ? const Center(child: Text("No bills available."))
               : ListView.builder(
-            physics:
-            const AlwaysScrollableScrollPhysics(), // Required for pull refresh
+            physics: const AlwaysScrollableScrollPhysics(),
             itemCount: billsToShow.length,
             itemBuilder: (context, index) {
               var bill = billsToShow[billsToShow.length - 1 - index];
@@ -71,127 +69,163 @@ class ViewBillsScreen extends StatelessWidget {
               } catch (_) {
                 formattedDate = bill.createdAt;
               }
+
               return Obx(() {
                 bool isExpanded = controller.expandedIndex.value == index;
 
                 return Card(
                   margin: const EdgeInsets.all(12),
-                  elevation: 5,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  child: Column(
-                    children: [
-                      /// HEADER
-                      InkWell(
-                        onTap: () {
-                          controller.expandedIndex.value =
-                          isExpanded ? -1 : index;   // collapse if already open, else expand
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                "BILL NO: ${bill.billNumber}",
-                                style: const TextStyle(
+                  elevation: 7,
+                  shadowColor: Colors.purple.withOpacity(0.3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+
+                      /// ***** EXACT MANAGE PACKAGE GRADIENT *****
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFF212121), // Deep Purple
+                          Color(0xFF616161), // Royal Purple-Blue
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+
+                    child: Column(
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            controller.expandedIndex.value =
+                            isExpanded ? -1 : index;
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "BILL NO: ${bill.billNumber}",
+                                  style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blue),
-                              ),
-
-                              /// Expand / Collapse Icon
-                              AnimatedRotation(
-                                turns: isExpanded ? 0.5 : 0,
-                                duration: const Duration(milliseconds: 250),
-                                child: const Icon(Icons.keyboard_arrow_down, size: 28),
-                              ),
-                            ],
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                AnimatedRotation(
+                                  turns: isExpanded ? 0.5 : 0,
+                                  duration:
+                                  const Duration(milliseconds: 250),
+                                  child: const Icon(
+                                    Icons.keyboard_arrow_down,
+                                    size: 28,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
 
-                      /// SHARE BUTTON (Always visible)
-                      Align(
-                        alignment: Alignment.topRight,
-                        child: IconButton(
-                          icon: const Icon(Icons.picture_as_pdf,
-                              color: Colors.red, size: 28),
-                          onPressed: () async {
-                            await controller.shareSingleBillPDF(bill);
-                          },
-                        ),
-                      ),
-
-                      /// EXPANDABLE CONTENT
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.fastOutSlowIn,
-                        child: isExpanded
-                            ? Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 10),
-
-                              /// CUSTOMER DETAILS
-                              const Text(
-                                "Customer Details",
-                                style: TextStyle(
-                                    fontSize: 17, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 10),
-
-                              _coloredBoldRow("Name", customer.name, Colors.green),
-                              _clickableRow(
-                                  title: "Phone",
-                                  value: customer.phone,
-                                  isEmail: false),
-                              _clickableRow(
-                                  title: "Email",
-                                  value: customer.email,
-                                  isEmail: true),
-                              _row("Address", customer.address),
-
-                              const Divider(height: 25),
-
-                              /// PRODUCT DETAILS
-                              const Text(
-                                "Product Details",
-                                style: TextStyle(
-                                    fontSize: 17, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 10),
-
-                              ...items.map((item) {
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _row("Product", item.name),
-                                    _row("Price", "${item.price}"),
-                                    _row("Quantity", item.quantity.toString()),
-                                    _row("Discount", item.discount.toString()),
-                                    if (item.category.isNotEmpty)
-                                      _row("Category", item.category),
-                                    if (item.brand.isNotEmpty)
-                                      _row("Brand", item.brand),
-                                    const Divider(),
-                                  ],
-                                );
-                              }).toList(),
-
-                              _row("Total", "${bill.total}"),
-                              _row("Date", formattedDate),
-                            ],
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.picture_as_pdf,
+                              color: Colors.red,
+                              size: 28,
+                            ),
+                            onPressed: () async {
+                              await controller.shareSingleBillPDF(bill);
+                            },
                           ),
-                        )
-                            : const SizedBox(),
-                      ),
-                    ],
+                        ),
+
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.fastOutSlowIn,
+                          child: isExpanded
+                              ? Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 10),
+
+                                const Text(
+                                  "Customer Details",
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white),
+                                ),
+                                const SizedBox(height: 10),
+
+                                _coloredBoldRow("Name", customer.name, Colors.green),
+                                _clickableRow(
+                                    title: "Phone",
+                                    value: customer.phone,
+                                    isEmail: false),
+                                _clickableRow(
+                                    title: "Email",
+                                    value: customer.email,
+                                    isEmail: true),
+                                _row("Address", customer.address),
+
+                                const Divider(
+                                    color: Colors.white70,
+                                    height: 25),
+
+                                const Text(
+                                  "Product Details",
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white),
+                                ),
+                                const SizedBox(height: 10),
+
+                                ...items.map((item) {
+                                  return Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      _row("Product", item.name),
+                                      _row("Price",
+                                          "${item.price}"),
+                                      _row("Quantity",
+                                          item.quantity.toString()),
+                                      _row("Discount",
+                                          item.discount.toString()),
+                                      if (item.category.isNotEmpty)
+                                        _row("Category",
+                                            item.category),
+                                      if (item.brand.isNotEmpty)
+                                        _row("Brand", item.brand),
+                                      const Divider(
+                                          color: Colors.white30),
+                                    ],
+                                  );
+                                }).toList(),
+
+                                _row("Total", "${bill.total}"),
+                                _row("Date", formattedDate),
+                              ],
+                            ),
+                          )
+                              : const SizedBox(),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               });
-
             },
           ),
         );
@@ -199,7 +233,6 @@ class ViewBillsScreen extends StatelessWidget {
     );
   }
 
-  /// SEARCH POPUP
   void _openSearchDialog(BuildContext context) {
     final searchCtrl = TextEditingController();
 
@@ -229,7 +262,6 @@ class ViewBillsScreen extends StatelessWidget {
     );
   }
 
-  /// ROW WIDGETS
   Widget _row(String title, String? value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -237,13 +269,20 @@ class ViewBillsScreen extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text("$title:",
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 15)),
+            child: Text(
+              "$title:",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Colors.white,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value ?? "",
-                style: const TextStyle(fontSize: 15)),
+            child: Text(
+              value ?? "",
+              style: const TextStyle(fontSize: 15, color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -257,9 +296,13 @@ class ViewBillsScreen extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text("$title:",
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 15)),
+            child: Text(
+              "$title:",
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.white),
+            ),
           ),
           Expanded(
             child: Text(
@@ -299,9 +342,13 @@ class ViewBillsScreen extends StatelessWidget {
           children: [
             SizedBox(
               width: 110,
-              child: Text("$title:",
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
+              child: Text(
+                "$title:",
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.white),
+              ),
             ),
             Expanded(
               child: Text(
@@ -309,7 +356,6 @@ class ViewBillsScreen extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 15,
                   color: Colors.blue,
-                  decoration: TextDecoration.none,
                   fontWeight: FontWeight.w600,
                 ),
               ),
