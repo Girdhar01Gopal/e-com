@@ -3,59 +3,65 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/bill_model.dart';
+import '../models/view_bill_model.dart';
 
 class BillingController extends GetxController {
-
+  // CUSTOMER FIELDS
   final name = TextEditingController();
   final phone = TextEditingController();
   final email = TextEditingController();
   final address = TextEditingController();
   final buyDate = TextEditingController();
 
-  // Product Inputs
+  // PRODUCT FIELDS
   final price = TextEditingController();
   final quantity = TextEditingController();
   final discount = TextEditingController();
   final brand = TextEditingController();
   final category = TextEditingController();
 
-  // Rx Values
   var selectedProduct = Rx<BillProductModel?>(null);
   var selectedSku = Rx<SkuModel?>(null);
-  var selectedStatus = "Process".obs;
+  var selectedStatus = "Success".obs;
+  var searchQuery = "".obs;
+  var expandedIndex = (-1).obs;
 
-  // Track expanded cards (View Bill Screen)
-  var expandedCards = <int, bool>{}.obs;
 
-  void toggleExpand(int id) {
-    expandedCards[id] = !(expandedCards[id] ?? false);
-  }
 
-  // LIST OF PRODUCTS FROM API
   RxList<BillProductModel> products = <BillProductModel>[].obs;
+  RxList<Data> allBills = <Data>[].obs;
+  RxList<Data> filteredBills = <Data>[].obs;
 
-  // API URL
-  final String apiUrl = "https://fashion.monteage.co.in/api/product_details";
-
-  // FETCH PRODUCTS
-  Future<void> fetchProducts() async {
-    try {
-      final res = await http.get(Uri.parse(apiUrl));
-
-      if (res.statusCode == 200) {
-        final List data = json.decode(res.body);
-        products.value = billProductModelFromJson(data);
-      } else {
-        Get.snackbar("Error", "Failed to load products");
-      }
-    } catch (e) {
-      Get.snackbar("Error", "API Error: $e");
-    }
+  String capitalizeFirst(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
   }
+
+
+  void searchBills(String keyword) {
+
+    if (keyword.isEmpty) {
+      filteredBills.clear();
+      return;
+    }
+
+    filteredBills.value = allBills.where((bill) {
+      return bill.billNumber.toLowerCase().contains(keyword.toLowerCase()) ||
+          bill.customer.name.toLowerCase().contains(keyword.toLowerCase()) ||
+          bill.customer.phone.contains(keyword);
+    }).toList();
+  }
+
+
+  final String apiProductList = "https://fashion.monteage.co.in/api/product_details";
+  final String apiPostBill = "https://fashion.monteage.co.in/api/offline-bills";
+  final String apiViewBill = "https://fashion.monteage.co.in/api/view-offline-bill";
 
   @override
   void onInit() {
@@ -63,10 +69,24 @@ class BillingController extends GetxController {
     fetchProducts();
   }
 
+  // FETCH PRODUCTS
+  Future<void> fetchProducts() async {
+    try {
+      final res = await http.get(Uri.parse(apiProductList));
+      if (res.statusCode == 200) {
+        final List data = json.decode(res.body);
+        products.value = billProductModelFromJson(data);
+      } else {
+        Get.snackbar("Error", "Failed to load products", backgroundColor: Colors.red);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "API Error: $e", backgroundColor: Colors.red);
+    }
+  }
+
   // SELECT PRODUCT
   void onProductSelected(BillProductModel product) {
     selectedProduct.value = product;
-
     brand.text = product.brandName;
     category.text = product.categoryName;
 
@@ -81,42 +101,85 @@ class BillingController extends GetxController {
     price.text = sku.sellPrice;
   }
 
-  // CALCULATIONS
-  double get subtotal {
-    double p = double.tryParse(price.text) ?? 0;
-    int q = int.tryParse(quantity.text) ?? 1;
-    double d = double.tryParse(discount.text) ?? 0;
-    return (p * q) - d;
+  // LOCAL BILL (only display locally)
+  void saveLocalBill() {}
+
+  // POST BILL API
+  Future<void> createBillAPI() async {
+    final Map<String, dynamic> body = {
+      "items": [
+        {
+          "sku_id": selectedSku.value!.id,
+          "quantity": int.tryParse(quantity.text) ?? 1,
+          "price": double.tryParse(price.text) ?? 0,
+          "discount": double.tryParse(discount.text) ?? 0,
+          "name": selectedProduct.value?.productName ?? "",
+          "category": category.text,
+          "brand": brand.text
+        }
+      ],
+      "customer": {
+        "name": name.text,
+        "phone": phone.text,
+        "email": email.text,
+        "address": address.text
+      }
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiPostBill),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201) {
+        Get.snackbar(
+          "Success",
+          "Bill Created Successfully",
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(12),
+          borderRadius: 10,
+        );
+      } else {
+        Get.snackbar("Error", response.body, backgroundColor: Colors.red);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Exception: $e", backgroundColor: Colors.red);
+    }
   }
 
-  double get grandTotal => subtotal;
+  // GET VIEW BILL API (UPDATED URL)
+  Future<void> fetchAllBills() async {
+    try {
+      final res = await http.get(Uri.parse(apiViewBill));
 
-  // SAVE BILL LOCALLY
-  var bills = <Map<String, dynamic>>[].obs;
-
-  void createBill() {
-    bills.add({
-      "customerName": name.text,
-      "phone": phone.text,
-      "email": email.text,
-      "address": address.text,
-      "buyDate": buyDate.text,
-      "product": selectedProduct.value?.productName,
-      "brand": brand.text,
-      "category": category.text,
-      "price": price.text,
-      "quantity": quantity.text,
-      "discount": discount.text,
-      "subtotal": subtotal.toStringAsFixed(2),
-      "grandTotal": grandTotal.toStringAsFixed(2),
-      "sku": selectedSku.value?.id,
-      "status": selectedStatus.value,
-    });
+      if (res.statusCode == 200) {
+        final jsonData = jsonDecode(res.body);
+        final model = ViewBillModel.fromJson(jsonData);
+        allBills.value = model.data;
+      } else {
+        Get.snackbar("Error", "Failed to fetch bills", backgroundColor: Colors.red);
+      }
+    } catch (e) {
+      Get.snackbar("Error", "Exception: $e", backgroundColor: Colors.red);
+    }
   }
 
-  // PDF GENERATION (UPDATED FULL LAYOUT)
-  Future<File> generatePDF() async {
+  // PDF GENERATION (SAME AS BEFORE)
+  Future<void> shareSingleBillPDF(Data bill) async {
     final pdf = pw.Document();
+
+    // Format date as dd/MM/yyyy
+    String formattedPDFDate = "";
+    try {
+      formattedPDFDate =
+          DateFormat("dd/MM/yyyy").format(DateTime.parse(bill.createdAt));
+    } catch (e) {
+      formattedPDFDate = bill.createdAt;
+    }
 
     pdf.addPage(
       pw.Page(
@@ -124,8 +187,6 @@ class BillingController extends GetxController {
         build: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-
-            // FULL HEADER BLOCK
             pw.Center(
               child: pw.Column(
                 children: [
@@ -141,74 +202,96 @@ class BillingController extends GetxController {
               ),
             ),
 
-            // CUSTOMER INFO
+            /// BILL INFO
+            pw.Text("Bill No: ${bill.billNumber}",
+                style: pw.TextStyle(
+                    fontSize: 16, fontWeight: pw.FontWeight.bold)),
+            pw.Text("Date: $formattedPDFDate"),
+            pw.Text("Status: Success",
+                style: pw.TextStyle(
+                    fontSize: 14, fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromInt(0xff28a745))),
+            pw.SizedBox(height: 20),
+            pw.Divider(),
+
+            /// CUSTOMER INFO
             pw.Text("Customer Info:",
                 style: pw.TextStyle(
                     fontSize: 16, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 10),
-            pw.Text("Name: ${name.text}"),
-            pw.Text("Phone: ${phone.text}"),
-            pw.Text("Email: ${email.text}"),
-            pw.Text("Address: ${address.text}"),
-            pw.Text("Buyed On: ${buyDate.text}"),
-
+            pw.Text("Name: ${bill.customer.name}"),
+            pw.Text("Phone: ${bill.customer.phone}"),
+            pw.Text("Email: ${bill.customer.email}"),
+            pw.Text("Address: ${bill.customer.address}"),
             pw.SizedBox(height: 20),
             pw.Divider(),
 
-            // PRODUCT DETAILS
-            pw.Text("Product Details:",
-                style: pw.TextStyle(
-                    fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 10),
-            pw.Text("Product Name: ${selectedProduct.value?.productName}"),
-            pw.Text("Brand: ${brand.text}"),
-            pw.Text("Category: ${category.text}"),
-            pw.Text("Price: ${price.text}"),
-            pw.Text("Quantity: ${quantity.text}"),
-            pw.Text("Discount: ${discount.text}"),
-            pw.Text("Subtotal: ${subtotal.toStringAsFixed(2)}"),
-
-            pw.SizedBox(height: 20),
-            pw.Divider(),
-
-            // STATUS
-            pw.Text("Status: ${selectedStatus.value}",
+            /// PRODUCT DETAILS
+            pw.Text("Product Info:",
                 style: pw.TextStyle(
                     fontSize: 16, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 10),
 
-            // GRAND TOTAL (BOLD)
-            pw.Text("Grand Total: ${grandTotal.toStringAsFixed(2)}",
+            ...bill.items.map((item) {
+              double price = double.tryParse(item.price.toString()) ?? 0;
+              int qty = item.quantity;
+              double discount = double.tryParse(item.discount.toString()) ?? 0;
+              double subtotal = (price * qty) - discount;
+
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text("Product: ${item.name}"),
+                  pw.Text("Price: $price"),
+                  pw.Text("Quantity: $qty"),
+                  pw.Text("Discount: $discount"),
+
+                  if (item.category.isNotEmpty)
+                    pw.Text("Category: ${item.category}"),
+                  if (item.brand.isNotEmpty)
+                    pw.Text("Brand: ${item.brand}"),
+                  pw.SizedBox(height: 15),
+                  pw.Text("Subtotal: $subtotal",
+                      style: pw.TextStyle(
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 14)),
+                  pw.Divider(),
+                ],
+              );
+            }).toList(),
+//₹
+            /// TOTAL
+            pw.SizedBox(height: 10),
+            pw.Text("Grand Total: ${bill.total}",
                 style: pw.TextStyle(
                     fontSize: 18, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 20),
 
-            // FOOTER BLOCK
             pw.Center(
               child: pw.Column(
                 children: [
-                  pw.Text("For queries, contact: 9027622569"),
-                  pw.Text("Monteage@gmail.com"),
+                  pw.Text("Contact: 9027622569"),
+                  pw.Text("Email: monteage@gmail.com"),
                   pw.Text("Website: www.monteage.com"),
                   pw.SizedBox(height: 10),
                   pw.Text("Thank you for shopping with us!"),
                 ],
               ),
-            ),
+            )
           ],
         ),
       ),
     );
 
     final dir = await getApplicationDocumentsDirectory();
-    final file =
-    File("${dir.path}/bill_${DateTime.now().millisecondsSinceEpoch}.pdf");
+    final file = File("${dir.path}/bill_${DateTime.now().millisecondsSinceEpoch}.pdf");
 
     await file.writeAsBytes(await pdf.save());
-    return file;
+
+    await Share.shareXFiles([XFile(file.path)], text: "Your Bill Receipt");
   }
 
-  // SHARE PDF
+
   Future<void> sharePDF(File file) async {
     await Share.shareXFiles([XFile(file.path)], text: "Your Bill Receipt");
   }
