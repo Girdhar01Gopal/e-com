@@ -84,12 +84,10 @@ class ViewBillsScreen extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
-
-                      /// ***** EXACT MANAGE PACKAGE GRADIENT *****
                       gradient: const LinearGradient(
                         colors: [
-                          Color(0xFF212121), // Deep Purple
-                          Color(0xFF616161), // Royal Purple-Blue
+                          Color(0xFF212121),
+                          Color(0xFF616161),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -97,41 +95,71 @@ class ViewBillsScreen extends StatelessWidget {
                     ),
 
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        InkWell(
-                          onTap: () {
-                            controller.expandedIndex.value =
-                            isExpanded ? -1 : index;
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              mainAxisAlignment:
-                              MainAxisAlignment.spaceBetween,
-                              children: [
+                        /// ---------------- HEADER ---------------- ///
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    "BILL NO: ${bill.billNumber}",
+                                    style: const TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+
+                                  AnimatedRotation(
+                                    turns: isExpanded ? 0.5 : 0,
+                                    duration:
+                                    const Duration(milliseconds: 250),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        controller.expandedIndex.value =
+                                        isExpanded ? -1 : index;
+                                      },
+                                      child: const Icon(
+                                        Icons.keyboard_arrow_down,
+                                        size: 28,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              /// PREVIEW WHEN COLLAPSED
+                              if (!isExpanded) ...[
+                                const SizedBox(height: 6),
+
                                 Text(
-                                  "BILL NO: ${bill.billNumber}",
+                                  "Customer: ${customer.name}",
                                   style: const TextStyle(
-                                    fontSize: 20,
+                                    fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: Colors.greenAccent,
                                   ),
                                 ),
-                                AnimatedRotation(
-                                  turns: isExpanded ? 0.5 : 0,
-                                  duration:
-                                  const Duration(milliseconds: 250),
-                                  child: const Icon(
-                                    Icons.keyboard_arrow_down,
-                                    size: 28,
-                                    color: Colors.white,
+                                Text(
+                                  "Date: $formattedDate",
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.white70,
                                   ),
                                 ),
                               ],
-                            ),
+                            ],
                           ),
                         ),
 
+                        /// PDF BUTTON - ALWAYS CLICKABLE
                         Align(
                           alignment: Alignment.topRight,
                           child: IconButton(
@@ -146,6 +174,7 @@ class ViewBillsScreen extends StatelessWidget {
                           ),
                         ),
 
+                        /// ---------------- EXPANDABLE SECTION ---------------- ///
                         AnimatedSize(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.fastOutSlowIn,
@@ -161,13 +190,17 @@ class ViewBillsScreen extends StatelessWidget {
                                 const Text(
                                   "Customer Details",
                                   style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white),
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                                 const SizedBox(height: 10),
 
-                                _coloredBoldRow("Name", customer.name, Colors.green),
+                                _coloredBoldRow(
+                                    "Name",
+                                    customer.name,
+                                    Colors.green),
                                 _clickableRow(
                                     title: "Phone",
                                     value: customer.phone,
@@ -179,15 +212,16 @@ class ViewBillsScreen extends StatelessWidget {
                                 _row("Address", customer.address),
 
                                 const Divider(
-                                    color: Colors.white70,
-                                    height: 25),
+                                    color: Colors.white70),
 
                                 const Text(
                                   "Product Details",
                                   style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white),
+                                    fontSize: 17,
+                                    fontWeight:
+                                    FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                                 const SizedBox(height: 10),
 
