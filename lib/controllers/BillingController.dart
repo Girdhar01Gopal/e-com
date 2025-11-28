@@ -29,39 +29,57 @@ class BillingController extends GetxController {
   var selectedProduct = Rx<BillProductModel?>(null);
   var selectedSku = Rx<SkuModel?>(null);
   var selectedStatus = "Success".obs;
+
+  // SEARCH
   var searchQuery = "".obs;
+  RxBool isSearchMode = false.obs;
+
+  // UI
   var expandedIndex = (-1).obs;
 
-
-
+  // LISTS
   RxList<BillProductModel> products = <BillProductModel>[].obs;
   RxList<Data> allBills = <Data>[].obs;
   RxList<Data> filteredBills = <Data>[].obs;
 
+  // CAPITALIZE
   String capitalizeFirst(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
 
+  // 🔍 **NEW SEARCH LOGIC**
+  List<Data> get filteredList {
+    if (searchQuery.value.isEmpty) return allBills;
 
-  void searchBills(String keyword) {
+    final q = searchQuery.value.toLowerCase();
 
-    if (keyword.isEmpty) {
-      filteredBills.clear();
-      return;
-    }
+    return allBills.where((bill) {
+      final name = bill.customer.name.toLowerCase();
+      final phone = bill.customer.phone.toLowerCase();
+      final billNo = bill.billNumber.toLowerCase();
+      final productMatch = bill.items
+          .any((p) => p.name.toLowerCase().contains(q));
 
-    filteredBills.value = allBills.where((bill) {
-      return bill.billNumber.toLowerCase().contains(keyword.toLowerCase()) ||
-          bill.customer.name.toLowerCase().contains(keyword.toLowerCase()) ||
-          bill.customer.phone.contains(keyword);
+      return billNo.contains(q) ||
+          name.contains(q) ||
+          phone.contains(q) ||
+          productMatch;
     }).toList();
   }
 
+  // OLD FUNCTION — kept as it is (NO DELETE)
+  void searchBills(String keyword) {
+    searchQuery.value = keyword;
+  }
 
-  final String apiProductList = "https://fashion.monteage.co.in/api/product_details";
-  final String apiPostBill = "https://fashion.monteage.co.in/api/offline-bills";
-  final String apiViewBill = "https://fashion.monteage.co.in/api/view-offline-bill";
+  // API URLS
+  final String apiProductList =
+      "https://fashion.monteage.co.in/api/product_details";
+  final String apiPostBill =
+      "https://fashion.monteage.co.in/api/offline-bills";
+  final String apiViewBill =
+      "https://fashion.monteage.co.in/api/view-offline-bill";
 
   @override
   void onInit() {
@@ -101,10 +119,10 @@ class BillingController extends GetxController {
     price.text = sku.sellPrice;
   }
 
-  // LOCAL BILL (only display locally)
+  // LOCAL BILL
   void saveLocalBill() {}
 
-  // POST BILL API
+  // CREATE BILL API
   Future<void> createBillAPI() async {
     final Map<String, dynamic> body = {
       "items": [
@@ -151,7 +169,7 @@ class BillingController extends GetxController {
     }
   }
 
-  // GET VIEW BILL API (UPDATED URL)
+  // FETCH ALL BILLS API
   Future<void> fetchAllBills() async {
     try {
       final res = await http.get(Uri.parse(apiViewBill));
@@ -168,11 +186,10 @@ class BillingController extends GetxController {
     }
   }
 
-  // PDF GENERATION (SAME AS BEFORE)
+  // PDF GENERATION
   Future<void> shareSingleBillPDF(Data bill) async {
     final pdf = pw.Document();
 
-    // Format date as dd/MM/yyyy
     String formattedPDFDate = "";
     try {
       formattedPDFDate =
@@ -202,7 +219,6 @@ class BillingController extends GetxController {
               ),
             ),
 
-            /// BILL INFO
             pw.Text("Bill No: ${bill.billNumber}",
                 style: pw.TextStyle(
                     fontSize: 16, fontWeight: pw.FontWeight.bold)),
@@ -214,7 +230,6 @@ class BillingController extends GetxController {
             pw.SizedBox(height: 20),
             pw.Divider(),
 
-            /// CUSTOMER INFO
             pw.Text("Customer Info:",
                 style: pw.TextStyle(
                     fontSize: 16, fontWeight: pw.FontWeight.bold)),
@@ -226,7 +241,6 @@ class BillingController extends GetxController {
             pw.SizedBox(height: 20),
             pw.Divider(),
 
-            /// PRODUCT DETAILS
             pw.Text("Product Info:",
                 style: pw.TextStyle(
                     fontSize: 16, fontWeight: pw.FontWeight.bold)),
@@ -245,7 +259,6 @@ class BillingController extends GetxController {
                   pw.Text("Price: $price"),
                   pw.Text("Quantity: $qty"),
                   pw.Text("Discount: $discount"),
-
                   if (item.category.isNotEmpty)
                     pw.Text("Category: ${item.category}"),
                   if (item.brand.isNotEmpty)
@@ -253,14 +266,12 @@ class BillingController extends GetxController {
                   pw.SizedBox(height: 15),
                   pw.Text("Subtotal: $subtotal",
                       style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          fontSize: 14)),
+                          fontWeight: pw.FontWeight.bold, fontSize: 14)),
                   pw.Divider(),
                 ],
               );
             }).toList(),
-//₹
-            /// TOTAL
+
             pw.SizedBox(height: 10),
             pw.Text("Grand Total: ${bill.total}",
                 style: pw.TextStyle(
@@ -284,15 +295,10 @@ class BillingController extends GetxController {
     );
 
     final dir = await getApplicationDocumentsDirectory();
-    final file = File("${dir.path}/bill_${DateTime.now().millisecondsSinceEpoch}.pdf");
+    final file =
+    File("${dir.path}/bill_${DateTime.now().millisecondsSinceEpoch}.pdf");
 
     await file.writeAsBytes(await pdf.save());
-
-    await Share.shareXFiles([XFile(file.path)], text: "Your Bill Receipt");
-  }
-
-
-  Future<void> sharePDF(File file) async {
     await Share.shareXFiles([XFile(file.path)], text: "Your Bill Receipt");
   }
 }

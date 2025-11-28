@@ -7,7 +7,9 @@ import '../models/view_enquiry_model.dart'; // Import the correct model file
 
 class ViewEnquiryController extends GetxController {
   RxList<Data> enquiryList = <Data>[].obs; // List of Data objects from view_enquiry_model.dart
-  final GetStorage storage = GetStorage(); // Create instance of GetStorage
+  final GetStorage storage = GetStorage();
+  RxString searchQuery = "".obs;
+  RxBool isSearchMode = false.obs;
 
   @override
   void onInit() {

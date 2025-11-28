@@ -4,28 +4,50 @@ import 'package:get/get.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../controllers/viewenquirycontroller.dart';
-import '../models/view_enquiry_model.dart'; // Import the correct model
+import '../models/view_enquiry_model.dart';
 
 class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
   const ViewEnquiryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Reverse the list to display the latest enquiries at the top
-    var reversedList = controller.enquiryList.reversed.toList();
-
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
-        title: const Text(
-          "View Enquiries",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: Obx(() {
+          // If search mode is OFF -> show normal title
+          if (!controller.isSearchMode.value) {
+            return const Text(
+              "View Enquiries",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          }
+
+          // If search mode is ON -> show search field
+          return TextField(
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            cursorColor: Colors.white,
+            decoration: const InputDecoration(
+              hintText: "Search by name or phone...",
+              hintStyle: TextStyle(color: Colors.white70),
+              border: InputBorder.none,
+            ),
+            onChanged: (value) {
+              controller.searchQuery.value = value.trim();
+            },
+          );
+        }),
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Colors.blue, Colors.blueAccent],
               begin: Alignment.topLeft,
@@ -33,25 +55,60 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
             ),
           ),
         ),
+        actions: [
+          Obx(() {
+            final isSearch = controller.isSearchMode.value;
+            return IconButton(
+              icon: Icon(
+                isSearch ? Icons.close : Icons.search,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                if (isSearch) {
+                  // Turn OFF search
+                  controller.isSearchMode.value = false;
+                  controller.searchQuery.value = "";
+                  FocusScope.of(context).unfocus();
+                } else {
+                  // Turn ON search
+                  controller.isSearchMode.value = true;
+                }
+              },
+            );
+          }),
+        ],
       ),
 
       body: Obx(() {
-        if (controller.enquiryList.isEmpty) {
+        // Reverse list to show latest on top
+        List<Data> list = controller.enquiryList.reversed.toList();
+
+        // Apply search filter if any
+        final query = controller.searchQuery.value.toLowerCase();
+        if (query.isNotEmpty) {
+          list = list.where((e) {
+            final name = (e.name ?? "").toLowerCase();
+            final mobile = (e.mobile ?? "").toLowerCase();
+            return name.contains(query) || mobile.contains(query);
+          }).toList();
+        }
+
+        if (list.isEmpty) {
           return const Center(
             child: Text(
-              "No Enquiries Added",
+              "No Enquiries Found",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           );
         }
 
         return RefreshIndicator(
-          onRefresh: _onRefresh, // This triggers the refresh action
+          onRefresh: _onRefresh,
           child: ListView.builder(
             padding: const EdgeInsets.all(14),
-            itemCount: reversedList.length,
+            itemCount: list.length,
             itemBuilder: (context, index) {
-              final enquiry = reversedList[index];
+              final enquiry = list[index];
 
               return Card(
                 elevation: 3,
@@ -61,10 +118,10 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       colors: [
-                        Color(0xFF212121), // Darker shade for the gradient
-                        Color(0xFF616161), // Lighter shade for the gradient
+                        Color(0xFF212121),
+                        Color(0xFF616161),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -79,16 +136,18 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _row("Name", enquiry.name, Colors.green),
-                              _row("Phone", enquiry.mobile, Colors.white),
-                              _row("Email", enquiry.email, Colors.white),
-                              _row("Message", enquiry.message, Colors.white),
+                              _row("Name", enquiry.name ?? "", Colors.green),
+                              _row("Phone", enquiry.mobile ?? "", Colors.white),
+                              _row("Email", enquiry.email ?? "", Colors.white),
+                              _row("Message", enquiry.message ?? "", Colors.white),
                             ],
                           ),
                         ),
-
                         IconButton(
-                          icon: const Icon(Icons.share, color: Colors.red), // Changed share icon color to red
+                          icon: const Icon(
+                            Icons.picture_as_pdf,
+                            color: Colors.red,
+                          ),
                           onPressed: () async {
                             final pdf = await _generatePDF(enquiry);
                             _sharePDF(pdf);
@@ -114,16 +173,19 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
         children: [
           Text(
             "$title: ",
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
-              color: Colors.white, // Text color is white for clarity
+              color: Colors.white,
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontSize: 15, color: textColor), // Custom text color
+              style: TextStyle(
+                fontSize: 15,
+                color: textColor,
+              ),
             ),
           ),
         ],
@@ -148,27 +210,31 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
               ),
             ),
             pw.SizedBox(height: 12),
-            pw.Text("Name: ${enquiry.name}"),
-            pw.Text("Phone: ${enquiry.mobile}"),
-            pw.Text("Email: ${enquiry.email}"),
-            pw.Text("Message: ${enquiry.message}"),
+            pw.Text("Name: ${enquiry.name ?? ''}"),
+            pw.Text("Phone: ${enquiry.mobile ?? ''}"),
+            pw.Text("Email: ${enquiry.email ?? ''}"),
+            pw.Text("Message: ${enquiry.message ?? ''}"),
           ],
         ),
       ),
     );
 
     final dir = await getApplicationDocumentsDirectory();
-    final file = File("${dir.path}/enquiry_${DateTime.now().millisecondsSinceEpoch}.pdf");
+    final file = File(
+      "${dir.path}/enquiry_${DateTime.now().millisecondsSinceEpoch}.pdf",
+    );
     await file.writeAsBytes(await pdf.save());
     return file;
   }
 
   Future<void> _sharePDF(File file) async {
-    await Share.shareXFiles([XFile(file.path)], text: "Enquiry Details");
+    await Share.shareXFiles(
+      [XFile(file.path)],
+      text: "Enquiry Details",
+    );
   }
 
-  // Function to simulate fetching fresh data or reloading the list
   Future<void> _onRefresh() async {
-    await controller.fetchEnquiries(); // This function should fetch the latest data from the API
+    await controller.fetchEnquiries();
   }
 }

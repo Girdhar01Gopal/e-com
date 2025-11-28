@@ -6,7 +6,6 @@ import '../controllers/BillingController.dart';
 
 class ViewBillsScreen extends StatelessWidget {
   final BillingController controller = Get.find();
-  final RxMap<int, bool> expanded = <int, bool>{}.obs;
 
   @override
   Widget build(BuildContext context) {
@@ -14,19 +13,30 @@ class ViewBillsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
-        title: const Text(
-          "View Bills",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: Obx(() {
+          if (!controller.isSearchMode.value) {
+            return const Text(
+              "View Bills",
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            );
+          }
+
+          return TextField(
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            cursorColor: Colors.white,
+            decoration: const InputDecoration(
+              hintText: "Search Bill No, Name, Phone, Product...",
+              hintStyle: TextStyle(color: Colors.white70),
+              border: InputBorder.none,
+            ),
+            onChanged: (value) => controller.searchQuery.value = value.trim(),
+          );
+        }),
         iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () => _openSearchDialog(context),
-          )
-        ],
+        elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -36,19 +46,36 @@ class ViewBillsScreen extends StatelessWidget {
             ),
           ),
         ),
+
+        actions: [
+          Obx(() {
+            return IconButton(
+              icon: Icon(
+                controller.isSearchMode.value ? Icons.close : Icons.search,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                if (controller.isSearchMode.value) {
+                  controller.isSearchMode.value = false;
+                  controller.searchQuery.value = "";
+                  FocusScope.of(context).unfocus();
+                } else {
+                  controller.isSearchMode.value = true;
+                }
+              },
+            );
+          }),
+        ],
       ),
 
       body: Obx(() {
-        final billsToShow = controller.filteredBills.isNotEmpty ||
-            controller.searchQuery.value.isNotEmpty
-            ? controller.filteredBills
-            : controller.allBills;
+        final billsToShow = controller.filteredList.reversed.toList();
 
         return RefreshIndicator(
           color: Colors.blue,
           backgroundColor: Colors.white,
           onRefresh: () async {
-            controller.searchBills("");
+            controller.searchQuery.value = "";
             await controller.fetchAllBills();
           },
 
@@ -58,11 +85,11 @@ class ViewBillsScreen extends StatelessWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount: billsToShow.length,
             itemBuilder: (context, index) {
-              var bill = billsToShow[billsToShow.length - 1 - index];
-              var customer = bill.customer;
-              var items = bill.items;
+              final bill = billsToShow[index];
+              final customer = bill.customer;
+              final items = bill.items;
 
-              String formattedDate = "";
+              String formattedDate;
               try {
                 formattedDate = DateFormat("dd/MM/yyyy")
                     .format(DateTime.parse(bill.createdAt));
@@ -78,9 +105,7 @@ class ViewBillsScreen extends StatelessWidget {
                   elevation: 7,
                   shadowColor: Colors.purple.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-
+                      borderRadius: BorderRadius.circular(16)),
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
@@ -93,35 +118,35 @@ class ViewBillsScreen extends StatelessWidget {
                         end: Alignment.bottomRight,
                       ),
                     ),
-
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// ---------------- HEADER ---------------- ///
+                        /// HEADER
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: isExpanded ? 6 : 4),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: isExpanded ? 6 : 4),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     "BILL NO: ${bill.billNumber}",
                                     style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white),
                                   ),
-                                  AnimatedRotation(
-                                    turns: isExpanded ? 0.5 : 0,
-                                    duration: const Duration(milliseconds: 250),
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        controller.expandedIndex.value =
-                                        isExpanded ? -1 : index;
-                                      },
+                                  GestureDetector(
+                                    onTap: () {
+                                      controller.expandedIndex.value =
+                                      isExpanded ? -1 : index;
+                                    },
+                                    child: AnimatedRotation(
+                                      turns: isExpanded ? 0.5 : 0,
+                                      duration: const Duration(milliseconds: 250),
                                       child: const Icon(
                                         Icons.keyboard_arrow_down,
                                         size: 26,
@@ -132,50 +157,40 @@ class ViewBillsScreen extends StatelessWidget {
                                 ],
                               ),
 
-                              /// COLLAPSED PREVIEW (VERY TIGHT)
                               if (!isExpanded) ...[
                                 const SizedBox(height: 1),
                                 Text(
                                   "Customer: ${customer.name}",
                                   style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.greenAccent,
-                                  ),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.greenAccent),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   "Date: $formattedDate",
                                   style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.white70,
-                                  ),
+                                      fontSize: 13,
+                                      color: Colors.white70),
                                 ),
                               ],
-
-                              /// WHEN EXPANDED → VERY SMALL GAP BEFORE DETAILS
-                              if (isExpanded) const SizedBox(height: 4),
                             ],
                           ),
                         ),
 
-
-                        /// PDF BUTTON - ALWAYS CLICKABLE
+                        /// PDF BUTTON
                         Align(
                           alignment: Alignment.topRight,
                           child: IconButton(
-                            icon: const Icon(
-                              Icons.picture_as_pdf,
-                              color: Colors.red,
-                              size: 28,
-                            ),
+                            icon: const Icon(Icons.picture_as_pdf,
+                                color: Colors.red, size: 28),
                             onPressed: () async {
                               await controller.shareSingleBillPDF(bill);
                             },
                           ),
                         ),
 
-                        /// ---------------- EXPANDABLE SECTION ---------------- ///
+                        /// EXPANDABLE CONTENT
                         AnimatedSize(
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.fastOutSlowIn,
@@ -187,7 +202,6 @@ class ViewBillsScreen extends StatelessWidget {
                               CrossAxisAlignment.start,
                               children: [
                                 const SizedBox(height: 10),
-
                                 const Text(
                                   "Customer Details",
                                   style: TextStyle(
@@ -198,10 +212,8 @@ class ViewBillsScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 10),
 
-                                _coloredBoldRow(
-                                    "Name",
-                                    customer.name,
-                                    Colors.green),
+                                _coloredBoldRow("Name",
+                                    customer.name, Colors.green),
                                 _clickableRow(
                                     title: "Phone",
                                     value: customer.phone,
@@ -212,15 +224,13 @@ class ViewBillsScreen extends StatelessWidget {
                                     isEmail: true),
                                 _row("Address", customer.address),
 
-                                const Divider(
-                                    color: Colors.white70),
+                                const Divider(color: Colors.white70),
 
                                 const Text(
                                   "Product Details",
                                   style: TextStyle(
                                     fontSize: 17,
-                                    fontWeight:
-                                    FontWeight.bold,
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
                                 ),
@@ -235,9 +245,9 @@ class ViewBillsScreen extends StatelessWidget {
                                       _row("Price",
                                           "${item.price}"),
                                       _row("Quantity",
-                                          item.quantity.toString()),
+                                          "${item.quantity}"),
                                       _row("Discount",
-                                          item.discount.toString()),
+                                          "${item.discount}"),
                                       if (item.category.isNotEmpty)
                                         _row("Category",
                                             item.category),
@@ -268,34 +278,7 @@ class ViewBillsScreen extends StatelessWidget {
     );
   }
 
-  void _openSearchDialog(BuildContext context) {
-    final searchCtrl = TextEditingController();
-
-    Get.dialog(
-      AlertDialog(
-        title: const Text("Search Bill"),
-        content: TextField(
-          controller: searchCtrl,
-          decoration: const InputDecoration(
-            hintText: "Search by Bill No, Name, Phone",
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Get.back(),
-          ),
-          TextButton(
-            child: const Text("Search"),
-            onPressed: () {
-              controller.searchBills(searchCtrl.text.trim());
-              Get.back();
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  /// ROWS ------------------------
 
   Widget _row(String title, String? value) {
     return Padding(
@@ -304,14 +287,11 @@ class ViewBillsScreen extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text(
-              "$title:",
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: Colors.white,
-              ),
-            ),
+            child: Text("$title:",
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.white)),
           ),
           Expanded(
             child: Text(
@@ -331,22 +311,17 @@ class ViewBillsScreen extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text(
-              "$title:",
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Colors.white),
-            ),
+            child: Text("$title:",
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.white)),
           ),
           Expanded(
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 16,
-                color: color,
-                fontWeight: FontWeight.w900,
-              ),
+                  fontSize: 16, color: color, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -363,7 +338,6 @@ class ViewBillsScreen extends StatelessWidget {
       onTap: () async {
         final Uri uri =
         isEmail ? Uri.parse("mailto:$value") : Uri.parse("tel:$value");
-
         if (await canLaunchUrl(uri)) {
           launchUrl(uri);
         } else {
@@ -377,13 +351,11 @@ class ViewBillsScreen extends StatelessWidget {
           children: [
             SizedBox(
               width: 110,
-              child: Text(
-                "$title:",
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Colors.white),
-              ),
+              child: Text("$title:",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.white)),
             ),
             Expanded(
               child: Text(
