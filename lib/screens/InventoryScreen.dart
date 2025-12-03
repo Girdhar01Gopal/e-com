@@ -1,89 +1,143 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import '../controllers/InventoryController.dart';
+import 'add_item_screen.dart';
+import 'update_item_screen.dart';
 
-class InventoryScreen extends GetView<InventoryController> {
-  const InventoryScreen({super.key});
+class InventoryScreen extends StatelessWidget {
+  // Initialize the controller
+  final InventoryController controller = Get.put(InventoryController());
 
   @override
   Widget build(BuildContext context) {
-    Get.put(InventoryController());
-
     return Scaffold(
-      backgroundColor: Colors.white,
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.blue.shade700,
-        onPressed: () => _openAddOrEditSheet(context),
-        child: Icon(Icons.add, color: Colors.white),
-      ),
-
       appBar: AppBar(
+        title: Text(
+          'Inventory',
+          style: TextStyle(color: Colors.white),  // Set text color to white
+        ),
+        backgroundColor: Colors.blueAccent, // AppBar background color
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.blue.shade800, Colors.blue.shade400],
+              colors: [Colors.blue, Colors.blueAccent], // Blue gradient
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
-        title: const Text(
-          "Inventory",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: Colors.white,  // Set back arrow color to white
+          ),
+          onPressed: () {
+            Get.back(); // Go back to the previous screen
+          },
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add,
+              color: Colors.white,),
+            onPressed: () {
+              Get.to(() => AddItemScreen()); // Navigate to AddItemScreen
+            },
+          ),
+        ],
       ),
-
       body: Obx(() {
-        if (controller.items.isEmpty) {
-          return Center(
-            child: Text(
-              "No inventory items added yet",
-              style: TextStyle(fontSize: 16.sp),
-            ),
-          );
-        }
-
         return ListView.builder(
-          padding: EdgeInsets.all(16.w),
-          itemCount: controller.items.length,
+          itemCount: controller.inventoryList.length,
           itemBuilder: (context, index) {
-            final item = controller.items[index];
+            var item = controller.inventoryList[index];
+            // Determine stock status based on quantity
+            String stockStatus = item.quantity > 0 ? 'In Stock' : 'Out of Stock';
+            Color stockColor = item.quantity > 0 ? Colors.green : Colors.red;
 
-            return GestureDetector(
-              onTap: () =>
-                  _openAddOrEditSheet(context, isEdit: true, index: index),
-              child: Container(
-                padding: EdgeInsets.all(16.w),
-                margin: EdgeInsets.only(bottom: 14.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
+            return Card(
+              margin: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+              elevation: 8,  // Add shadow for a more professional look
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),  // Rounded corners for card
+              ),
+              child: ListTile(
+                contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+                leading: CircleAvatar(
+                  child: Text(
+                    item.name[0], // Show the first letter of item name
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  radius: 30,  // Size of the circular avatar
+                  backgroundColor: Colors.blueAccent,  // Background color of the avatar
+                  foregroundColor: Colors.white,  // Text color inside the avatar
+                ),
+                title: Text(
+                  item.name,
+                  overflow: TextOverflow.ellipsis,  // Prevent text overflow in the title
+                  maxLines: 1,  // Limit title to one line
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18, // Slightly larger font for the item name
+                    color: Colors.black87,  // Dark color for text to improve readability
+                  ),
+                ),
+                subtitle: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    // Quantity
+                    Text(
+                      'Qty: ${item.quantity}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.normal,
+                        fontSize: 14,
+                        color: Colors.grey[700], // Slightly muted color for quantity
+                      ),
+                    ),
+                    SizedBox(width: 15), // Space between quantity and stock status
+                    // Stock status with color
+                    Text(
+                      stockStatus,
+                      style: TextStyle(
+                        color: stockColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
-
-                child: Row(
+                trailing: Column(
+                  mainAxisSize: MainAxisSize.min,  // Ensure Column takes minimum space
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Expanded(
-                      child: Text(
-                        "${item['name']}\nQty: ${item['qty']} • ₹${item['price']}",
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    // Display the price with Indian Rupees
+                    Text(
+                      '₹${item.price.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.blueAccent,
                       ),
                     ),
-                    Icon(Icons.edit, color: Colors.blue.shade700, size: 26),
+                    SizedBox(height: 5), // Small gap between price and edit button
+                    // Edit Icon with fixed size to prevent overflow
+                    Container(
+                      width: 40,  // Fixed width for the icon button
+                      height: 28, // Fixed height for the icon button
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.blueAccent, // Background color of the icon button
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.edit,
+                          color: Colors.red,  // White color for the edit icon
+                        ),
+                        onPressed: () {
+                          Get.to(() => UpdateItemScreen(item: item)); // Navigate to UpdateItemScreen
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -91,85 +145,6 @@ class InventoryScreen extends GetView<InventoryController> {
           },
         );
       }),
-    );
-  }
-
-  // -------------------------
-  // ADD / EDIT BOTTOM SHEET
-  // -------------------------
-  void _openAddOrEditSheet(BuildContext context,
-      {bool isEdit = false, int? index}) {
-    if (isEdit) controller.editItem(index!);
-
-    Get.bottomSheet(
-      Container(
-        padding: EdgeInsets.all(20.w),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Form(
-          key: controller.formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isEdit ? "Edit Item" : "Add Item",
-                style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 20.h),
-
-              _inputField(controller.nameController, "Item Name"),
-              SizedBox(height: 12.h),
-
-              _inputField(controller.qtyController, "Quantity",
-                  keyboardType: TextInputType.number),
-              SizedBox(height: 12.h),
-
-              _inputField(controller.priceController, "Price",
-                  keyboardType: TextInputType.number),
-              SizedBox(height: 20.h),
-
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade700,
-                  padding:
-                  EdgeInsets.symmetric(vertical: 12.h, horizontal: 40.w),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  isEdit
-                      ? controller.updateItem(index!)
-                      : controller.addInventoryItem();
-                },
-                child: Text(
-                  isEdit ? "Update Item" : "Add Item",
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-      isScrollControlled: true,
-    );
-  }
-
-  Widget _inputField(TextEditingController ctrl, String label,
-      {TextInputType keyboardType = TextInputType.text}) {
-    return TextFormField(
-      controller: ctrl,
-      keyboardType: keyboardType,
-      validator: (value) => value!.isEmpty ? "Enter $label" : null,
-      decoration: InputDecoration(
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
     );
   }
 }

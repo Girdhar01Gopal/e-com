@@ -120,8 +120,8 @@ class ViewEnquiryScreen extends GetView<ViewEnquiryController> {
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
-                        Color(0xFF212121),
-                        Color(0xFF616161),
+                        Color(0xFF6D6027),
+                        Color(0xFFD3CBB8),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,

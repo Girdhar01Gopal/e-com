@@ -1,113 +1,52 @@
 import 'package:get/get.dart';
-import 'package:flutter/material.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../models/inventory_model.dart';
 
 class InventoryController extends GetxController {
-  final storage = GetStorage();  // Persistent storage
+  // Observable list of inventory items
+  var inventoryList = <InventoryItem>[].obs;
 
-  RxList<Map<String, dynamic>> items = <Map<String, dynamic>>[].obs;
+  // Observable for loading state
+  var isLoading = false.obs;
 
-  // Form controllers
-  final nameController = TextEditingController();
-  final qtyController = TextEditingController();
-  final priceController = TextEditingController();
+  // API base URL (replace with your API endpoint)
+  final String apiUrl = 'https://yourapi.com/inventory';
 
-  final formKey = GlobalKey<FormState>();
-
+  // Fetch inventory items from API (or populate with sample data)
   @override
   void onInit() {
     super.onInit();
-    loadInventory();
+    // Sample data (replace with actual API call)
+    inventoryList.addAll([
+      InventoryItem(id: '1', name: 'Laptop', quantity: 10, price: 1200.99),
+      InventoryItem(id: '2', name: 'Phone', quantity: 50, price: 699.99),
+      InventoryItem(id: '3', name: 'Headphones', quantity: 150, price: 99.99),
+      InventoryItem(id: '4', name: 'Smartwatch', quantity: 200, price: 299.99),
+      InventoryItem(id: '5', name: 'Charger', quantity: 100, price: 29.99),
+      InventoryItem(id: '6', name: 'Keyboard', quantity: 75, price: 59.99),
+      InventoryItem(id: '7', name: 'Mouse', quantity: 80, price: 19.99),
+      InventoryItem(id: '8', name: 'Monitor', quantity: 30, price: 499.99),
+      InventoryItem(id: '9', name: 'Speaker', quantity: 120, price: 129.99),
+      InventoryItem(id: '10', name: 'Webcam', quantity: 60, price: 89.99),
+    ]);
   }
 
-  // -------------------------
-  // LOAD INVENTORY FROM LOCAL STORAGE
-  // -------------------------
-  void loadInventory() {
-    List? storedData = storage.read("inventory_items");
-    if (storedData != null) {
-      items.value = List<Map<String, dynamic>>.from(storedData);
+  // Add item to inventory
+  void addItem(InventoryItem item) {
+    inventoryList.add(item); // Add item to the list
+  }
+
+  // Update an existing inventory item
+  void updateItem(InventoryItem updatedItem) {
+    int index = inventoryList.indexWhere((item) => item.id == updatedItem.id);
+    if (index != -1) {
+      inventoryList[index] = updatedItem; // Update the item
     }
   }
 
-  // -------------------------
-  // SAVE INVENTORY TO STORAGE
-  // -------------------------
-  void saveInventory() {
-    storage.write("inventory_items", items);
-  }
-
-  // -------------------------
-  // ADD ITEM
-  // -------------------------
-  void addInventoryItem() {
-    if (!formKey.currentState!.validate()) return;
-
-    items.add({
-      "name": nameController.text,
-      "qty": qtyController.text,
-      "price": priceController.text,
-    });
-
-    saveInventory(); // persist
-
-    clearForm();
-    Get.back();
-
-    Get.snackbar(
-      "Success",
-      "Item added successfully",
-      backgroundColor: Colors.green.shade600,
-      colorText: Colors.white,
-    );
-  }
-
-  // -------------------------
-  // EDIT ITEM
-  // -------------------------
-  void editItem(int index) {
-    nameController.text = items[index]["name"];
-    qtyController.text = items[index]["qty"];
-    priceController.text = items[index]["price"];
-  }
-
-  // -------------------------
-  // UPDATE ITEM
-  // -------------------------
-  void updateItem(int index) {
-    if (!formKey.currentState!.validate()) return;
-
-    items[index] = {
-      "name": nameController.text,
-      "qty": qtyController.text,
-      "price": priceController.text,
-    };
-
-    items.refresh();
-    saveInventory();
-
-    clearForm();
-    Get.back();
-
-    Get.snackbar(
-      "Updated",
-      "Item updated successfully",
-      backgroundColor: Colors.blue,
-      colorText: Colors.white,
-    );
-  }
-
-  void clearForm() {
-    nameController.clear();
-    qtyController.clear();
-    priceController.clear();
-  }
-
-  @override
-  void onClose() {
-    nameController.dispose();
-    qtyController.dispose();
-    priceController.dispose();
-    super.onClose();
+  // Delete an inventory item
+  void deleteItem(String id) {
+    inventoryList.removeWhere((item) => item.id == id); // Remove item by ID
   }
 }

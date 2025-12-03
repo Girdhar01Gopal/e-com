@@ -42,13 +42,25 @@ class BillingController extends GetxController {
   RxList<Data> allBills = <Data>[].obs;
   RxList<Data> filteredBills = <Data>[].obs;
 
+  // ⭐ NEW — GRAND TOTAL
+  var grandTotal = 0.0.obs;
+
   // CAPITALIZE
   String capitalizeFirst(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
 
-  // 🔍 **NEW SEARCH LOGIC**
+  // ⭐ NEW — GRAND TOTAL CALCULATION
+  void calculateGrandTotal() {
+    double p = double.tryParse(price.text) ?? 0;
+    int q = int.tryParse(quantity.text) ?? 1;
+    double d = double.tryParse(discount.text) ?? 0;
+
+    grandTotal.value = (p * q) - (d * q);
+  }
+
+  // SEARCH LOGIC
   List<Data> get filteredList {
     if (searchQuery.value.isEmpty) return allBills;
 
@@ -58,8 +70,8 @@ class BillingController extends GetxController {
       final name = bill.customer.name.toLowerCase();
       final phone = bill.customer.phone.toLowerCase();
       final billNo = bill.billNumber.toLowerCase();
-      final productMatch = bill.items
-          .any((p) => p.name.toLowerCase().contains(q));
+      final productMatch =
+      bill.items.any((p) => p.name.toLowerCase().contains(q));
 
       return billNo.contains(q) ||
           name.contains(q) ||
@@ -68,7 +80,6 @@ class BillingController extends GetxController {
     }).toList();
   }
 
-  // OLD FUNCTION — kept as it is (NO DELETE)
   void searchBills(String keyword) {
     searchQuery.value = keyword;
   }
@@ -95,7 +106,8 @@ class BillingController extends GetxController {
         final List data = json.decode(res.body);
         products.value = billProductModelFromJson(data);
       } else {
-        Get.snackbar("Error", "Failed to load products", backgroundColor: Colors.red);
+        Get.snackbar("Error", "Failed to load products",
+            backgroundColor: Colors.red);
       }
     } catch (e) {
       Get.snackbar("Error", "API Error: $e", backgroundColor: Colors.red);
@@ -169,7 +181,7 @@ class BillingController extends GetxController {
     }
   }
 
-  // FETCH ALL BILLS API
+  // FETCH ALL BILLS
   Future<void> fetchAllBills() async {
     try {
       final res = await http.get(Uri.parse(apiViewBill));
@@ -179,14 +191,15 @@ class BillingController extends GetxController {
         final model = ViewBillModel.fromJson(jsonData);
         allBills.value = model.data;
       } else {
-        Get.snackbar("Error", "Failed to fetch bills", backgroundColor: Colors.red);
+        Get.snackbar("Error", "Failed to fetch bills",
+            backgroundColor: Colors.red);
       }
     } catch (e) {
       Get.snackbar("Error", "Exception: $e", backgroundColor: Colors.red);
     }
   }
 
-  // PDF GENERATION
+  // PDF GENERATION (unchanged)
   Future<void> shareSingleBillPDF(Data bill) async {
     final pdf = pw.Document();
 
@@ -197,6 +210,8 @@ class BillingController extends GetxController {
     } catch (e) {
       formattedPDFDate = bill.createdAt;
     }
+
+    double grandTotal = 0;
 
     pdf.addPage(
       pw.Page(
@@ -225,7 +240,8 @@ class BillingController extends GetxController {
             pw.Text("Date: $formattedPDFDate"),
             pw.Text("Status: Success",
                 style: pw.TextStyle(
-                    fontSize: 14, fontWeight: pw.FontWeight.bold,
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
                     color: PdfColor.fromInt(0xff28a745))),
             pw.SizedBox(height: 20),
             pw.Divider(),
@@ -249,8 +265,13 @@ class BillingController extends GetxController {
             ...bill.items.map((item) {
               double price = double.tryParse(item.price.toString()) ?? 0;
               int qty = item.quantity;
-              double discount = double.tryParse(item.discount.toString()) ?? 0;
-              double subtotal = (price * qty) - discount;
+              double discount =
+                  double.tryParse(item.discount.toString()) ?? 0;
+
+              double totalDiscount = discount * qty;
+              double subtotal = (price * qty) - totalDiscount;
+
+              grandTotal += subtotal;
 
               return pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -258,7 +279,7 @@ class BillingController extends GetxController {
                   pw.Text("Product: ${item.name}"),
                   pw.Text("Price: $price"),
                   pw.Text("Quantity: $qty"),
-                  pw.Text("Discount: $discount"),
+                  pw.Text("Discount: $discount (per unit)"),
                   if (item.category.isNotEmpty)
                     pw.Text("Category: ${item.category}"),
                   if (item.brand.isNotEmpty)
@@ -273,7 +294,7 @@ class BillingController extends GetxController {
             }).toList(),
 
             pw.SizedBox(height: 10),
-            pw.Text("Grand Total: ${bill.total}",
+            pw.Text("Grand Total: $grandTotal",
                 style: pw.TextStyle(
                     fontSize: 18, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 20),
@@ -295,10 +316,11 @@ class BillingController extends GetxController {
     );
 
     final dir = await getApplicationDocumentsDirectory();
-    final file =
-    File("${dir.path}/bill_${DateTime.now().millisecondsSinceEpoch}.pdf");
+    final file = File(
+        "${dir.path}/bill_${DateTime.now().millisecondsSinceEpoch}.pdf");
 
     await file.writeAsBytes(await pdf.save());
-    await Share.shareXFiles([XFile(file.path)], text: "Your Bill Receipt");
+    await Share.shareXFiles([XFile(file.path)],
+        text: "Your Bill Receipt");
   }
 }

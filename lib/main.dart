@@ -7,27 +7,32 @@ import 'infrastructure/routes/admin_routes.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
-  runApp(AdminApp());
+  runApp(const AdminApp());
 }
 
 class AdminApp extends StatelessWidget {
-  final box = GetStorage();
+  const AdminApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final box = GetStorage();
     final isLoggedIn = box.read('isLoggedIn') ?? false;
 
-    return ScreenUtilInit(
-      designSize: Size(411.42, 890.28),
-      builder: (_, __) {
-        return GetMaterialApp(
-          title: 'E-Com Billing App',
-          debugShowCheckedModeBanner: false,
-          getPages: AdminRoutes.routes,
-          initialRoute: isLoggedIn
-              ?AdminRoutes.ADMIN_SPLASH
-              : AdminRoutes.ADMIN_SPLASH,
-          theme: ThemeData(useMaterial3: true),
+    return GetMaterialApp(
+      title: 'E-Com Billing App',
+      debugShowCheckedModeBanner: false,
+      getPages: AdminRoutes.routes,
+
+      initialRoute: isLoggedIn
+          ? AdminRoutes.HOME        // IF LOGGED IN → HOME
+          : AdminRoutes.LOGIN,      // ELSE → LOGIN
+
+      theme: ThemeData(useMaterial3: true),
+
+      builder: (context, child) {
+        return ScreenUtilInit(
+          designSize: const Size(411.42, 890.28),
+          child: child!,
         );
       },
     );

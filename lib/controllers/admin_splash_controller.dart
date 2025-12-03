@@ -8,14 +8,15 @@ class AdminSplashController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    Future.delayed(const Duration(seconds: 5), () {
+
+    Future.delayed(const Duration(seconds: 2), () {
       bool isLoggedIn = box.read('isLoggedIn') ?? false;
+
       if (isLoggedIn) {
-       Get.offAllNamed(AdminRoutes.WELCOME);
-      } else {
         Get.offAllNamed(AdminRoutes.WELCOME);
+      } else {
+        Get.offAllNamed(AdminRoutes.LOGIN);
       }
-    }
-    );
+    });
   }
 }

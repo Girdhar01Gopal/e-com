@@ -30,6 +30,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ),
+
         leading: IconButton(
           icon: const Icon(Icons.notes, color: Colors.white),
           onPressed: () => _scaffoldKey.currentState!.openDrawer(),
@@ -49,94 +50,92 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
 
-      body: Padding(
-        padding: EdgeInsets.all(16.w),
-        child: ListView(
-          children: [
-            SizedBox(height: 10.h),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF6D6027), // Dark Brown
+              Color(0xFFD3CBB8), // Light Beige
+            ],
+            begin: Alignment.bottomCenter,
+            end: Alignment.topCenter,
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(16.w),
+          child: ListView(
+            children: [
+              SizedBox(height: 10.h),
 
-            /// HEADER
-            Text(
-              "👋 Welcome to the future of inspiration !",
-              style: TextStyle(
-                fontSize: 20.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+              /// HEADER
+              Text(
+                "👋 Step into the future of inspiration !",
+                style: TextStyle(
+                  fontSize: 20.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
-            ),
 
-            SizedBox(height: 25.h),
+              SizedBox(height: 25.h),
 
-            /// CARD 1 — BILLING
-            _leadCard(
-              title: "BILLING",
-              gradient: LinearGradient(
-                colors: [Color(0xffF2F2F2), Color(0xffD9D9D9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              /// CARD 1 — BILLING
+              _leadCard(
+                title: "BILLING",
+                gradient: LinearGradient(
+                  colors: [Color(0xffF2F2F2), Color(0xffD9D9D9)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                indicatorColor: Colors.yellow,
+                textColor: Colors.black,
+                extraShadow: true,
+
+                /// OPEN BILLING SCREEN
+                onTap: () => controller.goToScreen(AdminRoutes.BILLING),
               ),
-              indicatorColor: Colors.yellow,
-              textColor: Colors.black,
-              extraShadow: true,
 
-              /// OPEN BILLING SCREEN
-              onTap: () => controller.goToScreen(AdminRoutes.BILLING),
-            ),
+              SizedBox(height: 18.h),
 
-            SizedBox(height: 18.h),
+              /// CARD 2 — ADD ENQUIRY
+              _leadCard(
+                title: "ADD ENQUIRY",
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade500, Colors.blue.shade900],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                indicatorColor: Colors.lightBlueAccent,
+                textColor: Colors.white,
 
-            /// CARD 2 — ADD ENQUIRY
-            _leadCard(
-              title: "ADD ENQUIRY",
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade500, Colors.blue.shade900],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                /// OPEN ADD ENQUIRY SCREEN
+                onTap: () => controller.goToScreen(AdminRoutes.addenquiry),
               ),
-              indicatorColor: Colors.lightBlueAccent,
-              textColor: Colors.white,
 
-              /// OPEN ADD ENQUIRY SCREEN
-              onTap: () => controller.goToScreen(AdminRoutes.addenquiry),
-            ),
+              SizedBox(height: 18.h),
 
-            SizedBox(height: 18.h),
+              /// CARD 3 — INVENTORY
+              _leadCard(
+                title: "INVENTORY",
+                gradient: LinearGradient(
+                  colors: [Colors.grey.shade900, Colors.grey.shade700],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                indicatorColor: Colors.lightGreen,
+                textColor: Colors.white,
 
-            /// CARD 3 — INVENTORY
-            _leadCard(
-              title: "INVENTORY",
-              gradient: LinearGradient(
-                colors: [Colors.grey.shade900, Colors.grey.shade700],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+                /// OPEN INVENTORY SCREEN
+                onTap: () => controller.goToScreen(AdminRoutes.inventory),
               ),
-              indicatorColor: Colors.lightGreen,
-              textColor: Colors.white,
-
-              /// OPEN INVENTORY SCREEN
-              onTap: () => controller.goToScreen(AdminRoutes.inventory),
-            ),
-            // SizedBox(height: 18.h),
-            //
-            // /// CARD 2 — ADD ENQUIRY
-            // _leadCard(
-            //   title: "PROFILE",
-            //   gradient: LinearGradient(
-            //     colors: [Colors.green.shade500, Colors.green.shade900],
-            //     begin: Alignment.topLeft,
-            //     end: Alignment.bottomRight,
-            //   ),
-            //   indicatorColor: Colors.white,
-            //   textColor: Colors.white,
-            //
-            //   /// OPEN ADD ENQUIRY SCREEN
-            //   onTap: () => controller.goToScreen(AdminRoutes.profilescreen),
-            // ),
-          ],
+              // Add more cards as necessary
+            ],
+          ),
         ),
       ),
     );
   }
+
   /// SIMPLE CURVED CARD
   Widget _leadCard({
     required String title,

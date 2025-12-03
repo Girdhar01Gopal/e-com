@@ -111,8 +111,8 @@ class ViewBillsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       gradient: const LinearGradient(
                         colors: [
-                          Color(0xFF212121),
-                          Color(0xFF616161),
+                          Color(0xFF6D6027),
+                          Color(0xFFD3CBB8),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
